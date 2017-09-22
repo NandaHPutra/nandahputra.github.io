@@ -1,0 +1,17 @@
+	{ 
+		
+		"kapal": [
+			
+				{
+					"density": 2, "friction": 0, "bounce": 0, 
+					"filter": { "categoryBits": 1, "maskBits": 65535 },
+					"shape": [   56, 28  ,  18, 28  ,  14, 23  ,  14, 19  ,  19, 14  ,  56, 14  ,  61, 21  ]
+				}  ,
+				{
+					"density": 2, "friction": 0, "bounce": 0, 
+					"filter": { "categoryBits": 1, "maskBits": 65535 },
+					"shape": [   14, 19  ,  14, 23  ,  -2, 21  ]
+				}  
+		]
+		
+	}

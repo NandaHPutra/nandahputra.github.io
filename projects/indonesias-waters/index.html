@@ -1,0 +1,161 @@
+<html>
+<head>
+  <title>Indonesia's Waters</title>
+  <script type="text/javascript" src="js/phaser.min.js"></script>
+  <script type="text/javascript" src="game.js"></script>
+  <script type="text/javascript" src="buy.js"></script>
+  <script type="text/javascript" src="city.js"></script>
+  <script type="text/javascript" src="shipyard.js"></script>
+  <script type="text/javascript">
+
+
+  //get stored variable
+  //upgrade level = 0-4
+  var speedLevel=0;
+  var cannonLevel=0;
+  var armorLevel=0;
+  var accLevel=0;
+  var reloadLevel=0;
+
+  //set and get stored variable
+  var startingPoint=2;
+
+
+  //const
+  var projectileSpeed = 200;
+
+  var maxGear=3;
+  var minGear=-1;
+  var accel=0.15+0.02*speedLevel;
+  var maxSpeed=3+0.3*speedLevel;
+  var rotateSpeed=0.004;
+  var drag=1;
+  var effRotSpeed=0.5;
+  var cannonCooldown = 500-reloadLevel*50;
+  var cannonQty = 20+cannonLevel*4;
+  var cannonRange = 70+accLevel*5;
+  var cannonAccuracy=0.75+accLevel*0.03;
+  var maxHealth=100+armorLevel*50;
+
+  var AImaxspeed = 4;
+  var AIrotatespeed = 0.002;
+  var AIcannonCooldown = 300;
+  var AIcannonQty = 15;
+  var AIcannonRange = 70;
+  var AIcannonAccuracy = 0.7;
+
+  //programming
+  const PORT = 0;
+  const SBOARD = 2;
+  const NONE = 1;
+
+  var frameX = 8200;
+  var frameY = 3000;
+   
+  var landNames = ['sumatra', 'jawa', 'kalimantan', 'bali', 'ntb', 'ntt', 'timor', 'sulawesi', 'irian'];
+  var landsX=[964,2607,3340,3694,4100,4604,5418,4792,7341];
+  var landsY=[1043,2331,1027,2532,2532,2565,2692,1409,1904];
+  var seaportNames = ['Aceh', 'Padang', 'Banten', 'Ketapang', 'Surabaya', 'Bali', 'Samarinda', 'Teluk Boni', 'Gorontalo', 'Timor Leste', 'Manokwari', 'Merauke'];
+  var seaportX=[415,682,1953,2686,3126,3561,4007,4506,5049,5371,6650,7669];
+  var seaportY=[114,853,2140,1388,2389,2508,630,1743,996,2690,1385,2409];
+  var seaportSpawnX=[515,582,1903,2586,3180,3521,4107,4586,5099,5451,6550,7569];
+  var seaportSpawnY=[114,853,2040,1388,2339,2408,630,1810,1096,2750,1385,2409];
+
+  var AIX=[415,682,1953,2686,3126,3561,4007,4506,5049,5371,6650,7669];
+  var AIY=[114,853,2140,1388,2389,2508,630,1743,996,2690,1385,2409];
+
+  var speed;
+  var cursors;
+  var gear=0;
+  var fireCD=0;
+  var aiming = NONE;
+
+  var AIaimings = [];
+  var AIfireCDs = [];
+
+  var turning=NONE;
+
+  //global sprite groups
+  var player;
+  var playerCG;
+  var lands;
+  var landsCG;
+  var seaports;
+  var seaportsCG;
+  var projectiles;
+  var projectilesCG;
+  var AIs;
+  var AIsCG;
+
+  var aim;
+  var blasts;
+  var splashes;
+  var smokes;
+
+  var health;
+
+  //buttons
+  var btnLeft;
+  var btnRight;
+  var btnUp;
+  var btnDown;
+  var btnPort;
+  var btnSboard;
+  var btnNone;
+  var btnFire;
+
+
+
+  //buying
+  var seaportNumber = 0;
+
+  var scroll;
+
+  var cash = 1000;
+  var cashText;
+  var slot = 0;
+  var slotText;
+  var invText = [0,0,0,0,0,0,0,0,0,0,0,0];
+  var inven = [0,0,0,0,0,0,0,0,0,0,0,0];
+  var prices = [
+  [20,rand(20,23),rand(23,26),rand(17,20),rand(17,20),rand(17,20),rand(20,23),rand(14,17),rand(17,20),rand(11,14),rand(7,11),rand(7,11)],
+  [rand(20,23),20,rand(17,20),rand(20,23),rand(17,20),rand(20,23),rand(14,17),rand(17,20),rand(14,17),rand(17,20),rand(11,14),rand(11,14)],
+  [rand(23,26),rand(17,20),20,rand(17,20),rand(20,23),rand(17,20),rand(17,20),rand(20,23),rand(23,26),rand(11,14),rand(17,20),rand(17,20)],
+  [rand(23,26),rand(20,23),rand(17,20),20,rand(20,23),rand(11,14),rand(17,20),rand(11,14),rand(17,20),rand(17,20),rand(23,26),rand(14,17)],
+  [rand(20,23),rand(20,23),rand(17,20),rand(17,20),20,rand(17,20),rand(20,23),rand(17,20),rand(14,17),rand(17,20),rand(17,20),rand(14,17)],
+  [rand(20,23),rand(17,20),rand(11,14),rand(17,20),rand(11,14),20,rand(11,14),rand(23,26),rand(23,26),rand(20,23),rand(11,14),rand(17,20)],
+  [rand(20,23),rand(20,23),rand(17,20),rand(14,17),rand(20,23),rand(17,20),20,rand(14,17),rand(17,20),rand(11,14),rand(23,26),rand(17,20)],
+  [rand(17,20),rand(17,20),rand(17,20),rand(17,20),rand(17,20),rand(14,17),rand(17,20),20,rand(11,14),rand(11,14),rand(17,20),rand(23,26)],
+  [rand(17,20),rand(11,14),rand(20,23),rand(20,23),rand(20,23),rand(23,26),rand(14,17),rand(20,23),20,rand(17,20),rand(20,23),rand(26,29)],
+  [rand(14,17),rand(11,14),rand(17,20),rand(14,17),rand(17,20),rand(20,23),rand(17,20),rand(17,20),rand(23,26),20,rand(17,20),rand(23,26)],
+  [rand(11,14),rand(7,11),rand(20,23),rand(20,23),rand(14,17),rand(17,20),rand(11,14),rand(17,20),rand(17,20),rand(17,20),20,rand(29,32)],
+  [rand(7,11),rand(7,11),rand(11,14),rand(23,26),rand(11,14),rand(20,23),rand(17,20),rand(20,23),rand(11,14),rand(17,20),rand(17,20),20]
+    ];
+
+  function rand(x, y) {
+    return Math.floor(Math.random()*(y-x)+x);
+  }
+
+
+
+
+
+
+
+
+
+
+
+  var game = new Phaser.Game(800, 600, Phaser.CANVAS, "game");
+  game.state.add("TheGame",theGame);
+  game.state.add("TheBuy",theBuy);
+  game.state.add("TheCity",theCity);
+  game.state.add("TheShipyard",theShipyard);
+  game.state.start("TheCity"); // launch initial state
+
+
+  </script>
+</head>
+<body style="margin:0px;">  
+</body>
+</html>

@@ -1,0 +1,507 @@
+<!doctype html> 
+<html lang="en"> 
+<head> 
+    <meta charset="UTF-8" />
+    <title>Just Run!</title>
+    <script type="text/javascript" src="js/phaser.min.js"></script>
+    <style type="text/css">
+        body {
+            margin: 0;
+            background-color: black;
+        }
+    </style>
+</head>
+<body align="middle">
+    <div style="margin: auto">
+<script type="text/javascript">
+
+//COPYRIGHT: NANDA HARYONO P (6124107)
+
+var game = new Phaser.Game(800, 600, Phaser.AUTO, '', { preload: preload, create: create, update: update });
+var worldx=8000;
+
+var player;
+var player_speed;
+var cursors;
+var bgs;
+var jumps=0;
+var jump_delay=0;
+var isfacingright=true;
+
+var platforms;
+var level_platforms;
+var missiles;
+var missiletrails;
+var bullets;
+var blasts;
+
+var heli1;
+var heli2;
+var heli3;
+var gun1;
+var gun2;
+var gun3;
+
+var wave;
+var txt;
+
+var level=0;
+var time=0;
+
+var music;
+var explode;
+var fire;
+var dead=false;
+
+function preload() {
+    game.load.image('bg', 'assets/bgshadow.png');
+    game.load.spritesheet('player', 'assets/player.png', 22, 50);
+    game.load.spritesheet('ground', 'assets/ground.png', 120, 80);
+    game.load.image('missile','assets/fireball.png');
+    game.load.image('particle','assets/part.png');
+    game.load.spritesheet('heli', 'assets/heli.png', 80, 25);
+    game.load.spritesheet('blast', 'assets/blast.png', 60, 60);
+    game.load.image('gun', 'assets/guntop.png');
+    game.load.image('wave', 'assets/wave.png');
+
+    game.load.bitmapFont('font','assets/font.png','assets/font.fnt');
+
+    game.load.audio('music', 'assets/music.mp3');
+    game.load.audio('explode', 'assets/explode.mp3');
+    game.load.audio('fire', 'assets/fire.mp3');
+}
+
+function create() {
+    // INIT VARIABLE
+    game.world.setBounds(0,0,8800, 600);
+    player_speed = 1000; // pixels/second
+    game.physics.startSystem(Phaser.Physics.ARCADE);
+    game.physics.arcade.gravity.y = 2600;
+
+    //bg
+    bgs = game.add.tileSprite(0,0,8800,600,'bg');
+    wave = game.add.sprite(0, 400, 'wave');
+
+    // PLAYER
+    player = game.add.sprite(400, 300, 'player');
+    game.physics.arcade.enable(player);
+    player.body.collideWorldBounds = true;
+    player.animations.add('moveright', [14,15,16,17,18,19,20],20, true);
+    player.animations.add('moveleft', [21,22,23,24,25,26,27], 20, true);
+    player.animations.add('standright', [0,1], 2, true);
+    player.animations.add('standleft', [2,3], 2, true);
+    player.anchor.setTo(0.5,0.5);
+    player.body.drag.setTo(1000,0);
+    player.body.maxVelocity.x=500;
+
+    initPools();
+
+    initAudio();
+
+    // keyboard cursors
+    cursors = game.input.keyboard.createCursorKeys();
+
+    die();
+}
+
+function initPools(){
+    // GROUND depan + belakang
+    platforms = game.add.group();
+    platforms.enableBody = true;
+    for(var i=0; i <= 800; i+= 80) {
+        var ground = platforms.create(i, game.world.height - 200, 'ground');
+        ground.frame=0;
+        ground.body.immovable = true;
+        ground.body.allowGravity = false;
+    }
+    for(var i=worldx-240; i <= worldx+800; i+= 80) {
+        var ground = platforms.create(i, game.world.height - 200, 'ground');
+        ground.frame=0;
+        ground.body.immovable = true;
+        ground.body.allowGravity = false;
+    }
+
+    //missiles
+    missiles=game.add.group();
+    for(var i=0; i<16; i++) {
+        var m = missiles.create(game.camera.x,100+i*100, 'missile');
+        m.anchor.setTo(0.5,0.5);
+        game.physics.arcade.enable(m);
+        m.body.allowGravity=false;
+        m.outOfBoundsKill=true;
+        m.kill();
+    }
+
+    //missile trail
+    missiletrails=game.add.group();
+    for(var i=0; i<1000; i++) {
+        var trail = missiletrails.create(0,0, 'particle');
+        trail.anchor.setTo(0.5,0.5);
+        trail.kill();
+    }
+
+    //platforms
+    level_platforms = game.add.group();
+    level_platforms.enableBody=true;
+    for(var i=0; i < 100; i++) {
+        var ground = level_platforms.create(i, game.world.height - 200, 'ground');
+        ground.frame=0;
+        ground.body.immovable = true;
+        ground.body.allowGravity = false;
+        ground.kill();
+    }
+
+    //helis
+    heli1 = game.add.sprite(20, -200, 'heli');
+    heli1.enableBody=true;
+    heli1.animations.add('move', [1,2,3,4,5,6], 30, true);
+    heli1.animations.play('move');
+
+    heli2 = game.add.sprite(120, -200, 'heli');
+    heli2.enableBody=true;
+    heli2.animations.add('move', [1,2,3,4,5,6], 30, true);
+    heli2.animations.play('move');
+
+    heli3 = game.add.sprite(220, -200, 'heli');
+    heli3.enableBody=true;
+    heli3.animations.add('move', [1,2,3,4,5,6], 30, true);
+    heli3.animations.play('move');
+
+    //guns
+    gun1 = game.add.sprite(0,-40,'gun');
+    gun1.enableBody=true;
+
+    gun2 = game.add.sprite(0,-40,'gun');
+    gun2.enableBody=true;
+
+    gun3 = game.add.sprite(0,-40,'gun');
+    gun3.enableBody=true;
+
+    //gun bullet
+    bullets = game.add.group();
+    for(var i = 0; i<50;i++){
+        var bullet = bullets.create(0,0,'particle');
+        bullet.anchor.setTo(0.5, 0.5);
+        game.physics.arcade.enable(bullet);
+        bullet.body.allowGravity=false;
+        bullet.kill();
+    }
+
+    //blast
+    blasts = game.add.group();
+    for(var i = 0; i<20;i++){
+        var b = blasts.create(0,0,'blast');
+        b.anchor.setTo(0.5, 0.5);
+        b.kill();
+    }
+
+    //texts
+    txt = [ game.add.bitmapText(100,100,'font','LEVEL 1',50),
+            game.add.bitmapText(100,100,'font','Here Comes LEVEL 2',50),
+            game.add.bitmapText(100,100,'font','LEVEL 3. Watch out for Helis!',50),
+            game.add.bitmapText(100,100,'font','LEVEL 4. Dont die yet!',50),
+            game.add.bitmapText(100,100,'font','Even more helis on LEVEL 5',50),
+            game.add.bitmapText(100,100,'font','Still alive? Here is LEVEL 6',50),
+            game.add.bitmapText(100,100,'font','Now we have THREE!.. LEVEL 7',50),
+            game.add.bitmapText(100,100,'font','Just die please... LEVEL 8',50), 
+            game.add.bitmapText(100,100,'font','Here is the infinite LEVEL 8',50),
+            game.add.bitmapText(worldx+100,100,'font','LEVEL 1',50),
+            game.add.bitmapText(worldx+100,100,'font','Here Comes LEVEL 2',50),
+            game.add.bitmapText(worldx+100,100,'font','LEVEL 3. Watch out for Helis!',50),
+            game.add.bitmapText(worldx+100,100,'font','LEVEL 4. Dont die yet!',50),
+            game.add.bitmapText(worldx+100,100,'font','Even more helis on LEVEL 5',50),
+            game.add.bitmapText(worldx+100,100,'font','Still alive? Here is LEVEL 6',50),
+            game.add.bitmapText(worldx+100,100,'font','Now we have THREE!.. LEVEL 7',50),
+            game.add.bitmapText(worldx+100,100,'font','Just die please... LEVEL 8',50), 
+            game.add.bitmapText(worldx+100,100,'font','Here is the infinite LEVEL 8',50)];
+}
+
+
+function initAudio(){
+    music = game.add.audio('music');
+    music.autoplay=true;
+    music.loop=true;
+    music.volume=0.5;
+    music.play();
+
+    explode=game.add.audio('explode');
+    explode.volume=0.4;
+
+    fire=game.add.audio('fire');
+    fire.volume=0.7;
+}
+
+function update() {
+    
+    updateBG();
+
+    game.physics.arcade.collide(player, platforms);
+    game.physics.arcade.collide(player, level_platforms);
+    game.physics.arcade.collide(missiles, level_platforms, missilePlat);
+    game.physics.arcade.collide(bullets,level_platforms,killOnCollide);
+    game.physics.arcade.collide(player, missiles, die);
+    game.physics.arcade.collide(player, bullets, die);
+
+    if(dead){return;}
+
+    missiles.forEachAlive(missileMove,this);
+    missiles.forEachAlive(trailing,this);
+    missiletrails.forEachAlive(checkTrail,this);
+    blasts.forEachAlive(blastCheck,this);
+
+    heliUpdate(heli1,gun1,1);
+    heliUpdate(heli2,gun2,2);
+    heliUpdate(heli3,gun3,3);
+
+    updatePlayer();
+    spawnCheck();
+    levelCheck();
+
+    //move camera    
+    game.camera.x+=4;
+
+    time+=game.camera.x%120==0?1:0;
+}
+
+function trailing(obj){
+   //make trail
+    var trail = missiletrails.getFirstDead();
+    if(trail != null || trail != undefined) {
+        trail.revive();
+        trail.reset(obj.body.x+9,obj.body.y+5);
+    } 
+}
+
+
+function missileMove(missile){
+    var targetAngle = game.physics.arcade.angleToXY(missile, player.body.x, player.body.y+player.body.height+35);
+    if(targetAngle != missile.rotation) {
+        var delta =  targetAngle - missile.rotation;
+        if(delta > 0) {
+           missile.angle++;
+        } else {
+           missile.angle--;
+        }
+        if(Math.abs(delta) < game.math.degToRad(1)) {
+            missile.rotation = targetAngle;
+        }
+    }
+    missile.body.velocity.x = Math.cos(missile.rotation) * 450;
+    missile.body.velocity.y = Math.sin(missile.rotation) * 450;
+}
+
+function checkTrail(trail){
+    if(trail.x<game.camera.x||trail.x>game.camera.x+game.camera.width){trail.kill();}
+
+}
+
+function killOnCollide(m, plat){
+    m.kill();
+}
+
+function blastCheck(b){
+    b.damage(1);
+    b.frame++;
+}
+
+function missilePlat(m, plat){
+    m.kill();
+    plat.frame++;
+    plat.damage(1);
+    var b = blasts.getFirstDead();
+    if(b != null || b != undefined) {
+            b.revive();
+            b.frame=0;
+            b.reset(m.x, m.y);
+            b.health=11;
+    }
+    explode.play(); 
+}
+
+function updatePlayer(){
+    if(cursors.left.isDown) {
+        player.body.acceleration.x=-player_speed;
+    }else if(cursors.right.isDown){
+        player.body.acceleration.x=+player_speed;
+    }else{
+        player.body.acceleration.x=0;
+    }
+    if(cursors.up.isDown && jumps>0 && jump_delay<0){
+        player.body.velocity.y=-1000;
+        jumps--;
+        jump_delay=25;
+    }
+    if(player.body.touching.down){
+        jumps=1;
+    }
+    jump_delay--;
+    
+    
+    if(player.body.touching.down){
+        if(player.body.velocity.x<0){
+            isfacingright=false;
+            player.animations.play("moveleft");
+        }else if(player.body.velocity.x>0){
+            isfacingright=true;
+            player.animations.play("moveright");
+        }else if(isfacingright){
+            player.animations.play("standright");
+        }else{
+            player.animations.play("standleft");
+        }
+    }else if(jumps>0){
+        if(player.body.velocity.x<0){
+            isfacingright=false;
+        }else if(player.body.velocity.x>0){
+            isfacingright=true;
+        }
+        if(isfacingright){
+            player.frame=28;
+        }else{
+            player.frame=29;
+        }
+    }else{
+        if(player.body.velocity.x<0){
+            isfacingright=false;
+        }else if(player.body.velocity.x>0){
+            isfacingright=true;
+        }
+        if(isfacingright){
+            player.frame=30;
+        }else{
+            player.frame=31;
+        }
+    }
+
+    if(player.body.y+player.body.height>=game.world.height||player.body.x+player.body.width<game.camera.x){die(player,player);}
+}
+
+function spawnCheck(){
+    if(game.camera.x%132==0&&game.camera.x<worldx-1200){
+        var ground = level_platforms.getFirstDead();
+        if(ground != null || ground != undefined) {
+            ground.revive();
+            ground.frame=0;
+            ground.reset(game.camera.x+game.camera.width+100, 200 + (Math.random()*360));
+            ground.body.immovable = true;
+            ground.body.allowGravity = false;
+            ground.health=4;
+        }         
+    }
+    
+    if(game.camera.x%(420-level*12)==0&&game.camera.x>800&&game.camera.x<worldx-1400){
+        for(var i=0; i<4; i++) {
+            var m = missiles.getFirstDead();
+            if(m != null || m != undefined) {
+                m.revive();
+                m.reset(game.camera.x,100+i*100);
+                m.outOfBoundsKill=true;
+            }             
+        }
+    }
+}
+
+function levelCheck(){
+    if(game.camera.x==worldx-800){
+        missiles.forEachAlive(killall,this);
+        bullets.forEachAlive(killall,this);
+    }
+    
+    if(game.camera.x==worldx){
+        txt[level].visible=false;
+        txt[level+1].visible=true;
+        txt[level+10].visible=false;
+        txt[level+11<=17?level+11:17].visible=true;
+
+        game.camera.x=0;
+        player.body.x-=8000;
+        level=level==7?7:level+1;
+        level_platforms.forEachAlive(killall,this);
+        wave.x=0;
+    }
+}
+
+function killall(obj){
+    obj.kill();
+}
+
+function heliUpdate(heli,gun,n){
+    if(n*2>level){return;}
+    heli.x = (n-1)*100+game.camera.x+20;
+    heli.y=20;
+    gun.y = heli.y+20;
+    gun.x=heli.x+40;
+    gun.rotation = game.physics.arcade.angleToXY(gun, player.x, player.y);
+
+    if((game.camera.x%330==0||game.camera.x%330==24||game.camera.x%330==48)&&game.camera.x>800&&game.camera.x<worldx-1400){
+        var bullet = bullets.getFirstDead();
+        if(bullet != null || bullet != undefined){
+            bullet.revive();
+            bullet.checkWorldBounds = true;
+            bullet.outOfBoundsKill = true;
+            bullet.reset(gun.x,gun.y);
+
+            var rand = Math.random()/10-0.05;
+
+            bullet.body.velocity.x = Math.cos(gun.rotation+rand) * 550;
+            bullet.body.velocity.y = Math.sin(gun.rotation+rand) * 550;
+
+            fire.play();
+        }
+    }
+}
+
+function updateBG(){
+    var cycle = time%600;
+    var temp = time%100;
+    var r = 155+(cycle<200||cycle==600?0:(cycle<300?temp:(cycle<500?100:100-temp)));
+    var g = 155+(cycle<100?temp:(cycle<300?100:(cycle<400?100-temp:0)));
+    var b = 155+(cycle<100||cycle>=500?100:(cycle<200?100-temp:(cycle>400?temp:0)));
+    bgs.tint = rgbToHex(r,g,b);
+    wave.x+=2;
+
+}
+
+function componentToHex(c) {
+    var hex = c.toString(16);
+    return hex.length == 1 ? "0" + hex : hex;
+}
+
+function rgbToHex(r, g, b) {
+    return "0x" + componentToHex(r) + componentToHex(g) + componentToHex(b);
+}
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////GAME MODE////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+function restart(var1, var2){
+    player.body.x=400;
+    player.body.y=300;
+    game.camera.x=0;
+    level=0;
+    missiles.forEachAlive(killall,this);
+    bullets.forEachAlive(killall,this);
+    level_platforms.forEachAlive(killall,this);
+    wave.x=0;
+
+    for(var i=0;i<18;i++){
+        txt[i].visible=false;
+    }
+    txt[0].visible=true;
+    txt[10].visible=true;
+}
+
+function die(var1, var2){
+    restart(player,player);
+}
+
+//COPYRIGHT: NANDA HARYONO P (6124107)
+</script>
+</div>
+</body>
+</html>
+

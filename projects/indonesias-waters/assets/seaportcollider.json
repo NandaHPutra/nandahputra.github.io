@@ -1,0 +1,27 @@
+	{ 
+		
+		"seaport": [
+			
+				{
+					"density": 2, "friction": 0, "bounce": 0, 
+					"filter": { "categoryBits": 1, "maskBits": 65535 },
+					"shape": [   13, 26  ,  32, 9  ,  54, 1  ,  76, 1  ,  122, 99  ,  84, 128  ,  11, 103  ,  0, 56  ]
+				}  ,
+				{
+					"density": 2, "friction": 0, "bounce": 0, 
+					"filter": { "categoryBits": 1, "maskBits": 65535 },
+					"shape": [   130, 77  ,  122, 99  ,  76, 1  ,  103, 12  ,  123, 34  ]
+				}  ,
+				{
+					"density": 2, "friction": 0, "bounce": 0, 
+					"filter": { "categoryBits": 1, "maskBits": 65535 },
+					"shape": [   29, 121  ,  11, 103  ,  84, 128  ,  55, 131  ]
+				}  ,
+				{
+					"density": 2, "friction": 0, "bounce": 0, 
+					"filter": { "categoryBits": 1, "maskBits": 65535 },
+					"shape": [   84, 128  ,  122, 99  ,  105, 118  ]
+				}  
+		]
+		
+	}
