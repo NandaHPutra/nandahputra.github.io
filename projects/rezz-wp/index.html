@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<canvas id="myCanvas" width="3840" height="2160"
+style="border:1px solid #c3c3c3">
+Your browser does not support the canvas element.
+</canvas>
+
+<script>
+var canvas = document.getElementById("myCanvas")
+var ctx = canvas.getContext("2d")
+var hue = 335 
+var canvasWidth = 3840
+var canvasHeight = 2560
+var stageBottom = 1800
+
+//background black
+ctx.beginPath()
+ctx.rect(0, 0, canvasWidth, canvasHeight)
+ctx.fillStyle = "black"
+ctx.fill()
+
+var drawLine = function(x, y, options = {}){
+    length = options.length || 480
+    width = options.width || 2
+    saturation = options.saturation || 100
+    intensity = options.intensity || 50
+    hx = options.hue || hue
+    var grd = ctx.createLinearGradient(0, y, 0, length + y)
+    grd.addColorStop(0, getColor(saturation, intensity, hx))
+    grd.addColorStop(1, "transparent")
+    ctx.fillStyle = grd
+//    ctx.filter = 'blur(1px)'
+    ctx.fillRect(x, y, width, length) 
+//    ctx.filter = 'blur(0px)'
+    count++
+}
+
+var drawGoggleLine = function(x, y, options = {}){
+    length = options.length || 480
+    width = options.width || 2
+    saturation = options.saturation || 100
+    intensity = options.intensity || 50
+    blurString = options.blurString || 'blur(1px)'
+    hx = options.hue || hue
+    var grd = ctx.createLinearGradient(0, y, 0, length + y)
+    grd.addColorStop(0, getColor(saturation, intensity, hx))
+    grd.addColorStop(0.7, getColor(saturation, intensity, hx))
+    grd.addColorStop(1, "transparent")
+    ctx.fillStyle = grd
+    ctx.filter = blurString
+    ctx.fillRect(x, y, width + 1, length) 
+    ctx.filter = 'blur(0px)'
+//    
+//    ctx.fillRect(x, y- width + 2, length) 
+//    ctx.filter = 'blur(0px)'
+    count++
+}
+
+var drawCircle = function(x, y, radius, options){
+    saturation = options.saturation || 100
+    intensity = options.intensity || 50
+    hx = options.hue || hue
+    ctx.beginPath()
+    ctx.arc(x, y, radius, 0, 2 * Math.PI, false)
+    ctx.fillStyle = getColor(saturation, intensity, hx)
+    ctx.fill()
+}
+
+var drawLed = function(x, y, radius, options){
+    saturation = options.saturation || 100
+    intensity = options.intensity || 50
+    hx = options.hue || hue
+    ctx.beginPath()
+    ctx.shadowColor = getColor(saturation, intensity, hx);
+    ctx.shadowBlur = 10;
+    ctx.arc(x, y, radius*0.8, 0, 2 * Math.PI, false)
+    ctx.fillStyle = getColor(saturation, intensity, hx)
+    ctx.fill()
+    ctx.shadowBlur = 15;
+    ctx.fill()
+    ctx.fill()
+    ctx.shadowBlur = 30;
+    ctx.fill()
+    ctx.shadowBlur = 40;
+    ctx.fill()
+    ctx.shadowBlur = 60;
+    ctx.fill()
+    ctx.shadowBlur = 80;
+    ctx.fill()
+    ctx.shadowBlur = 0;
+}
+
+var getColor = function(saturation, intensity, h = null){
+    hx = h || hue
+    return "hsl("+hx+","+saturation+"%, "+intensity+"%)"
+}
+
+var getRandomInt = function(min, max) {
+    return min + Math.floor(Math.random() * (max - min))
+}
+
+var generateCluster = function(x1, y1, x2, y2, interval, options){
+    xlow = Math.min(x1,x2)
+    xhigh = Math.max(x1,x2)
+    for(x = xlow; x <= xhigh; x += interval){
+        var y = getRandomInt(y1, y2)
+        drawLine(x, y, options)
+    }
+}
+
+var generateGoggleCluster = function(x1, y1, x2, y2, interval, options){
+    xlow = Math.min(x1,x2)
+    xhigh = Math.max(x1,x2)
+    for(x = xlow; x <= xhigh; x += interval){
+        var y = getRandomInt(y1, y2)
+        var arr = options
+//        arr.intensity = getRandomInt(50,100)
+//        arr.length = getRandomInt(90,140)
+        drawGoggleLine(x, y, arr)
+    }
+}
+
+var roundedPoly = function(points,radius){
+    var i, x, y, len, p1, p2, p3, v1, v2, sinA, sinA90, radDirection, drawDirection, angle, halfAngle, cRadius, lenOut
+    var asVec = function (p, pp, v) { // convert points to a line with len and normalised
+        v.x = pp.x - p.x // x,y as vec
+        v.y = pp.y - p.y
+        v.len = Math.sqrt(v.x * v.x + v.y * v.y) // length of vec
+        v.nx = v.x / v.len // normalised
+        v.ny = v.y / v.len
+        v.ang = Math.atan2(v.ny, v.nx) // direction of vec
+    }
+    v1 = {}
+    v2 = {}
+    len = points.length                         // number points
+    p1 = points[len - 1]                        // start at end of path
+    for (i = 0; i < len; i++) {                  // do each corner
+        p2 = points[(i) % len]                  // the corner point that is being rounded
+        p3 = points[(i + 1) % len]
+        // get the corner as vectors out away from corner
+        asVec(p2, p1, v1)                       // vec back from corner point
+        asVec(p2, p3, v2)                       // vec forward from corner point
+        // get corners cross product (asin of angle)
+        sinA = v1.nx * v2.ny - v1.ny * v2.nx    // cross product
+        // get cross product of first line and perpendicular second line
+        sinA90 = v1.nx * v2.nx - v1.ny * -v2.ny // cross product to normal of line 2
+        angle = Math.asin(sinA)                 // get the angle
+        radDirection = 1                        // may need to reverse the radius
+        drawDirection = false                   // may need to draw the arc anticlockwise
+        // find the correct quadrant for circle center
+        if (sinA90 < 0) {
+            if (angle < 0) {
+                angle = Math.PI + angle // add 180 to move us to the 3 quadrant
+            } else {
+                angle = Math.PI - angle // move back into the 2nd quadrant
+                radDirection = -1
+                drawDirection = true
+            }
+        } else {
+            if (angle > 0) {
+                radDirection = -1
+                drawDirection = true
+            }
+        }
+        halfAngle = angle / 2
+        // get distance from corner to point where round corner touches line
+        lenOut = Math.abs(Math.cos(halfAngle) * radius / Math.sin(halfAngle))
+        if (lenOut > Math.min(v1.len / 2, v2.len / 2)) { // fix if longer than half line length
+            lenOut = Math.min(v1.len / 2, v2.len / 2)
+            // ajust the radius of corner rounding to fit
+            cRadius = Math.abs(lenOut * Math.sin(halfAngle) / Math.cos(halfAngle))
+        } else {
+            cRadius = radius
+        }
+        x = p2.x + v2.nx * lenOut // move out from corner along second line to point where rounded circle touches
+        y = p2.y + v2.ny * lenOut
+        x += -v2.ny * cRadius * radDirection // move away from line to circle center
+        y += v2.nx * cRadius * radDirection
+        // x,y is the rounded corner circle center
+        ctx.arc(x, y, cRadius, v1.ang + Math.PI / 2 * radDirection, v2.ang - Math.PI / 2 * radDirection, drawDirection) // draw the arc clockwise
+        p1 = p2
+        p2 = p3
+    }
+    ctx.closePath()
+}
+
+
+
+
+var count = 0
+
+var generateLayerOne = function(){
+    for(x = 0; x <= canvasWidth; x += 12){
+        var y = getRandomInt(0,canvasHeight)
+        drawLine(x, y, {intensity: 10})
+    }
+}
+
+var generateLayerTwo = function(){
+    //sides
+    generateCluster(10, 100, 600, 2100, 14, {intensity: 20})
+    generateCluster(600, 1200, 1600, 2100, 28, {intensity: 15})
+    generateCluster(canvasWidth-600, 1200, canvasWidth-1600, 2100, 32, {intensity: 15})
+    generateCluster(canvasWidth-10, 100, canvasWidth-600, 2100, 14, {intensity: 20})
+    //mid
+    generateCluster(1200, 400, canvasWidth-1200, 2100, 12, {intensity: 20})
+    generateCluster(1400, -100, canvasWidth-1400, 2100, 12, {intensity: 20})
+    generateCluster(800, 1700, canvasWidth-800, 2100, 32, {intensity: 25})
+    
+}
+
+var generateLayerThree = function(){
+    //sides
+    generateCluster(10, 400, 800, 2100, 7, {intensity: 25})
+    generateCluster(800, 400, 900, 2100, 9, {intensity: 25})
+    generateCluster(canvasWidth-10, 400, canvasWidth-900, 2100, 9, {intensity: 25})
+    generateCluster(canvasWidth-10, 400, canvasWidth-800, 2100, 7, {intensity: 25})
+    
+    //mid
+    generateCluster(1300, 900, canvasWidth-1300, 2100, 9, {intensity: 30})
+    generateCluster(1500, -100, canvasWidth-1500, 900, 11, {intensity: 30})
+}
+
+var generateLayerFour = function(){
+    //left
+    generateCluster(10, 700, 500, 2100, 8, {intensity: 40})
+    generateCluster(500, 900, 700, 2100, 10, {intensity: 40})
+    generateCluster(700, 1400, 1000, 2400, 12, {intensity: 40})
+    
+    //right
+    generateCluster(canvasWidth-10, 700, canvasWidth-500, 2100, 8, {intensity: 40})
+    generateCluster(canvasWidth-500, 900, canvasWidth-700, 2100, 10, {intensity: 40})
+    generateCluster(canvasWidth-700, 1400, canvasWidth-1000, 2400, 12, {intensity: 40})
+    
+    //mid
+    generateCluster(1300, 900, canvasWidth-1300, 2100, 16, {intensity: 40})
+    generateCluster(1500, 200, canvasWidth-1500, 900, 22, {intensity: 40})
+    generateCluster(1100, 1700, canvasWidth-1100, 2100, 32, {intensity: 40})
+}
+
+var generateLayerFive = function(){
+    //left
+    generateCluster(10, 900, 300, 2400, 2, {intensity: 45})
+    generateCluster(300, 1100, 500, 2400, 2, {intensity: 45})
+    generateCluster(500, 1300, 800, 2400, 4, {intensity: 45})
+//    
+//    //right
+    generateCluster(canvasWidth-10, 900, canvasWidth-300, 2400, 2, {intensity: 45})
+    generateCluster(canvasWidth-300, 1100, canvasWidth-500, 2400, 2, {intensity: 45})
+    generateCluster(canvasWidth-500, 1300, canvasWidth-800, 2400, 4, {intensity: 45})
+    
+    //mid
+//    generateCluster(1500, 900, canvasWidth-1500, 2100, 3, {intensity: 55})
+    generateCluster(1600, 900, canvasWidth-1400, 2100, 6, {intensity: 55})
+    generateCluster(1700, -100, canvasWidth-1700, 900, 6, {intensity: 55})
+    generateCluster(1500, 900, canvasWidth-1600, 1900, 3, {intensity: 60})
+    generateCluster(1700, 1100, canvasWidth-1700, 1900, 2, {intensity: 60})
+}
+
+var generateGoggleLayer = function(){
+    generateGoggleCluster(canvasWidth/2 - 40, 1420, canvasWidth/2 + 20, 1500, 14, {saturation: 100, intensity:70, hue:188, length: 50, width:4, blurString: 'blur(2px)'})
+    generateGoggleCluster(canvasWidth/2 + 50, 1420, canvasWidth/2 + 110, 1500, 14, {saturation: 100, intensity:70, hue:188, length: 50, width:4, blurString: 'blur(2px)'})
+    generateGoggleCluster(canvasWidth/2 - 40, 1100, canvasWidth/2 + 110, 1400, 19, {saturation: 100, intensity:70, hue:188, length: 70, width:3})
+    generateGoggleCluster(canvasWidth/2 - 30, 700, canvasWidth/2 + 100, 1200, 19, {saturation: 100, intensity:70, hue:188, length: 90})
+    generateGoggleCluster(canvasWidth/2 - 10, 000, canvasWidth/2 + 80, 800, 19, {saturation: 100, intensity:70, hue:188, length: 120})
+    
+    generateGoggleCluster(canvasWidth/2 - 40, 1420, canvasWidth/2 + 20, 1500, 10, {saturation: 100, intensity:100, hue:188, length: 50, width:4, blurString: 'blur(2px)'})
+    generateGoggleCluster(canvasWidth/2 + 50, 1420, canvasWidth/2 + 110, 1500, 10, {saturation: 100, intensity:100, hue:188, length: 50, width:4, blurString: 'blur(2px)'})
+    generateGoggleCluster(canvasWidth/2 - 40, 1100, canvasWidth/2 + 110, 1400, 15, {saturation: 100, intensity:100, hue:188, length: 70, width:3})
+    generateGoggleCluster(canvasWidth/2 - 30, 700, canvasWidth/2 + 100, 1200, 15, {saturation: 100, intensity:100, hue:188, length: 90})
+    generateGoggleCluster(canvasWidth/2 - 10, 000, canvasWidth/2 + 80, 800, 15, {saturation: 100, intensity:100, hue:188, length: 120})
+}
+
+var generateStage = function(){
+    ctx.beginPath()
+    ctx.rect(0, stageBottom, canvasWidth, canvasHeight)
+    ctx.fillStyle = "black"
+    ctx.fill()
+}
+
+var generateVignettes = function(){
+    var grd = ctx.createRadialGradient(canvasWidth/2, canvasHeight/2 - 1000, canvasHeight/2 + 800, canvasWidth/2, canvasHeight/2 - 1000, canvasHeight/2 + 1000)
+    grd.addColorStop(0, "transparent")
+    grd.addColorStop(1, "black")
+    ctx.fillStyle = grd
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight)
+}
+
+var generateRezz = function(){ // :D
+    var center = canvasWidth/2
+    var bottom = stageBottom + 10
+    var triangle = [
+        { x: center - 240, y : bottom },
+        { x: center + 240, y : bottom },
+        { x: center + 220, y : bottom - 50 },
+        { x: center + 200, y : bottom - 70 },
+        { x: center + 180, y : bottom - 78 },
+        { x: center + 174, y : bottom - 100 },
+        { x: center + 174, y : bottom - 120 },
+        { x: center + 166, y : bottom - 140 },
+        { x: center + 160, y : bottom - 160 },
+        { x: center + 159, y : bottom - 180 },
+        { x: center + 158, y : bottom - 200 },
+        { x: center + 160, y : bottom - 213 },
+        { x: center + 148, y : bottom - 224 },
+        { x: center + 147, y : bottom - 240 },
+        { x: center + 147, y : bottom - 260 },
+        { x: center + 150, y : bottom - 280 },
+        { x: center + 150, y : bottom - 300 },
+        { x: center + 150, y : bottom - 320 },
+        { x: center + 130, y : bottom - 320 },
+        { x: center + 120, y : bottom - 340 },
+        { x: center + 116, y : bottom - 360 },
+        { x: center + 113, y : bottom - 380 },
+        { x: center + 110, y : bottom - 400 },
+        { x: center + 100, y : bottom - 410 },
+        { x: center + 80, y : bottom - 414 },
+        { x: center + 60, y : bottom - 420 },
+        { x: center + 0, y : bottom - 418 },
+        { x: center - 20, y : bottom - 410 },
+        { x: center - 40, y : bottom - 390 },
+        { x: center - 50, y : bottom - 340 },
+        { x: center - 56, y : bottom - 320 },
+        { x: center - 84, y : bottom - 320 },
+        { x: center - 80, y : bottom - 260 },
+        { x: center - 79, y : bottom - 240 },
+        { x: center - 78, y : bottom - 216 },
+        { x: center - 110, y : bottom - 186 },
+        { x: center - 116, y : bottom - 174 },
+        { x: center - 117, y : bottom - 153 },
+        { x: center - 117, y : bottom - 153 },
+        { x: center - 128, y : bottom - 147 },
+        { x: center - 148, y : bottom - 146 },
+        { x: center - 160, y : bottom - 140 },
+        { x: center - 180, y : bottom - 120 },
+        { x: center - 198, y : bottom - 100 },
+        { x: center - 216, y : bottom - 72 },
+        { x: center - 240, y : bottom - 50 },
+        { x: center - 260, y : bottom - 0 },
+    ]
+    var cornerRadius = 12
+    ctx.lineWidth = 6
+    ctx.fillStyle = "black"
+    ctx.strokeStyle = "black"
+    ctx.beginPath() // start a new path
+    roundedPoly(triangle, cornerRadius)
+    ctx.filter = 'blur(1px)'
+    ctx.fill()
+    ctx.stroke()
+    ctx.filter = 'blur(0px)'
+}
+
+var generateSolRepublic = function(){
+    var center = canvasWidth/2
+    var bottom = stageBottom + 10
+    var triangle = [
+        { x: center + 150, y : bottom - 300 },
+        { x: center + 150, y : bottom - 320 },
+        { x: center + 148, y : bottom - 340 },
+        { x: center + 144, y : bottom - 360 },
+        { x: center + 138, y : bottom - 370 },
+        { x: center + 132, y : bottom - 380 },
+        { x: center + 124, y : bottom - 400 },
+        { x: center + 94, y : bottom - 420 },
+        { x: center + 80, y : bottom - 425 },
+        { x: center + 70, y : bottom - 427 },
+        { x: center + 60, y : bottom - 428 },
+        { x: center + 52, y : bottom - 430 },
+        { x: center + 40, y : bottom - 432 },
+        { x: center + 20, y : bottom - 432 },
+        { x: center + 0, y : bottom - 428 },
+        { x: center - 20, y : bottom - 418 },
+        { x: center - 40, y : bottom - 410 },
+        { x: center - 50, y : bottom - 404 },
+        { x: center - 60, y : bottom - 388 },
+        { x: center - 70, y : bottom - 380 },
+        { x: center - 76, y : bottom - 360 },
+        { x: center - 80, y : bottom - 350 },
+        { x: center - 80, y : bottom - 260 },
+        { x: center - 72, y : bottom - 320 },
+        { x: center - 72, y : bottom - 327 },
+        { x: center - 62, y : bottom - 360 },
+        { x: center - 44, y : bottom - 380 },
+        { x: center - 20, y : bottom - 400 },
+        { x: center + 100, y : bottom - 400 },
+        { x: center + 120, y : bottom - 384 },
+        { x: center + 132, y : bottom - 370 },
+        { x: center + 139, y : bottom - 360 },
+        { x: center + 145, y : bottom - 340 },
+    ]
+    var cornerRadius = 12
+    ctx.lineWidth = 2
+    ctx.fillStyle = "black"
+    ctx.strokeStyle = "black"
+    ctx.beginPath() // start a new path
+    roundedPoly(triangle, cornerRadius)
+    ctx.filter = 'blur(1px)'
+    ctx.fill()
+    ctx.stroke()
+    ctx.filter = 'blur(0px)'
+}
+
+var generateGoggle = function(centerX, centerY){
+    var radius = 4
+    var gap = 10
+    var onLedOptions = {saturation: 100, intensity:98, hue:188}
+    var offLedOptions = {saturation: 70, intensity:60, hue:188}
+    
+    //draw inner ring
+    var ledCount = 4
+    var angleAdjustment = 560
+    var whichLedIsOff = getRandomInt(0, ledCount-1)
+    for(i=0; i<ledCount; i++){
+        x = Math.cos(((i * 360 * Math.PI + angleAdjustment) / 180) / ledCount)*radius*1.5 + centerX
+        y = Math.sin(((i * 360 * Math.PI + angleAdjustment) / 180) / ledCount)*radius*1.5 + centerY
+        if(i != whichLedIsOff){
+        }else{
+            drawCircle(x, y, radius, offLedOptions)
+            drawLed(x, y, radius, offLedOptions)
+        }
+    }
+    
+    //draw mid ring
+    var ledCount = 16
+    var randomRotateMid = getRandomInt(0, ledCount-1)
+    for(i=0; i<ledCount; i++){
+        x = Math.cos(((i + randomRotateMid) * 360 * Math.PI / 180) / ledCount)*gap*2 + centerX
+        y = Math.sin(((i + randomRotateMid) * 360 * Math.PI / 180) / ledCount)*gap*2 + centerY
+        if(i < 4 || (i >= ledCount/2 && i < ledCount/2 + 4)){
+        }else{
+            drawCircle(x, y, radius, offLedOptions)
+            drawLed(x, y, radius, offLedOptions)
+        }
+    }
+    
+    //draw outer ring
+    var ledCount = 24
+    var randomRotateOuter = getRandomInt(0, ledCount-1)
+    for(i=0; i<ledCount; i++){
+        x = Math.cos(((i + randomRotateOuter) * 360 * Math.PI / 180) / ledCount)*gap*3 + centerX
+        y = Math.sin(((i + randomRotateOuter) * 360 * Math.PI / 180) / ledCount)*gap*3 + centerY
+        if(i < 4 || (i >= ledCount/2 && i < ledCount/2 + 4)){
+        }else{
+            drawCircle(x, y, radius, offLedOptions)
+            drawLed(x, y, radius, offLedOptions)
+        }
+    }
+    
+    //draw inner ring
+    var ledCount = 4
+    var angleAdjustment = 560
+    for(i=0; i<ledCount; i++){
+        x = Math.cos(((i * 360 * Math.PI + angleAdjustment) / 180) / ledCount)*radius*1.5 + centerX
+        y = Math.sin(((i * 360 * Math.PI + angleAdjustment) / 180) / ledCount)*radius*1.5 + centerY
+        if(i != whichLedIsOff){
+            drawCircle(x, y, radius, onLedOptions)
+            drawLed(x, y, radius*2, onLedOptions)
+        }else{
+        }
+    }
+    
+    //draw mid ring
+    var ledCount = 16
+    for(i=0; i<ledCount; i++){
+        x = Math.cos(((i + randomRotateMid) * 360 * Math.PI / 180) / ledCount)*gap*2 + centerX
+        y = Math.sin(((i + randomRotateMid) * 360 * Math.PI / 180) / ledCount)*gap*2 + centerY
+        if(i < 4 || (i >= ledCount/2 && i < ledCount/2 + 4)){
+            drawCircle(x, y, radius, onLedOptions)
+            drawLed(x, y, radius*2, onLedOptions)
+        }else{
+        }
+    }
+    
+    //draw outer ring
+    var ledCount = 24
+    for(i=0; i<ledCount; i++){
+        x = Math.cos(((i + randomRotateOuter) * 360 * Math.PI / 180) / ledCount)*gap*3 + centerX
+        y = Math.sin(((i + randomRotateOuter) * 360 * Math.PI / 180) / ledCount)*gap*3 + centerY
+        if(i < 4 || (i >= ledCount/2 && i < ledCount/2 + 4)){
+            drawCircle(x, y, radius, onLedOptions)
+            drawLed(x, y, radius*2, onLedOptions)
+        }else{
+        }
+    }
+}
+
+
+ 
+generateLayerOne()
+generateLayerTwo()
+generateLayerThree()
+generateLayerFour()
+generateLayerFive()
+generateStage()
+generateVignettes()
+generateRezz()
+generateSolRepublic()
+generateGoggleLayer()
+generateGoggle(canvasWidth/2 - 6, stageBottom + 10 - 276)
+generateGoggle(canvasWidth/2 + 78, stageBottom + 10 - 275)
+console.log(count)
+
+
+</script>
+
+</body>
+</html>
