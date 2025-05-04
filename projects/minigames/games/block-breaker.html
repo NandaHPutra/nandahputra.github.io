@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Breakout Game</title>
+  <style>
+    body {
+      margin: 0;
+      background: #222;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      overflow: hidden;
+    }
+    canvas {
+      border: 2px solid white;
+    }
+    h1 {
+      color: white;
+      font-family: sans-serif;
+    }
+    #score {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      color: white;
+      font-size: 18px;
+      font-family: sans-serif;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="game" width="600" height="1000"></canvas>
+  <div id="score">Score: 0</div>
+
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const scoreDisplay = document.getElementById('score');
+
+    let score = 0;
+    let ballSpeedX = 6; // Doubled the speed
+    let ballSpeedY = -6; // Doubled the speed
+    let ballRadius = 10;
+    let paddleHeight = 16;
+    let paddleWidth = 120;
+    let paddleX = (canvas.width - paddleWidth) / 2;
+    let rightPressed = false;
+    let leftPressed = false;
+    let ballX = canvas.width / 2;
+    let ballY = canvas.height - 30;
+    let bricks = [];
+    let brickRowCount = 6; // Increased rows
+    let brickColumnCount = 8; // Increased columns
+    let brickWidth = 75;
+    let brickHeight = 20;
+    let brickPadding = 10;
+    let brickOffsetTop = 30;
+    let brickOffsetLeft = 30;
+
+    // Initialize bricks with more rows and columns
+    for (let c = 0; c < brickColumnCount; c++) {
+      bricks[c] = [];
+      for (let r = 0; r < brickRowCount; r++) {
+        bricks[c][r] = { x: 0, y: 0, status: 1 };
+      }
+    }
+
+    // Mouse event to control paddle
+    canvas.addEventListener('mousemove', (e) => {
+      const relativeX = e.clientX - canvas.offsetLeft;
+      if (relativeX > 0 && relativeX < canvas.width) {
+        paddleX = relativeX - paddleWidth / 2;
+      }
+    });
+
+    function drawBall() {
+      ctx.beginPath();
+      ctx.arc(ballX, ballY, ballRadius, 0, Math.PI * 2);
+      ctx.fillStyle = "#0095DD";
+      ctx.fill();
+      ctx.closePath();
+    }
+
+    function drawPaddle() {
+      ctx.beginPath();
+      ctx.rect(paddleX, canvas.height - paddleHeight, paddleWidth, paddleHeight);
+      ctx.fillStyle = "#0095DD";
+      ctx.fill();
+      ctx.closePath();
+    }
+
+    function drawBricks() {
+      for (let c = 0; c < brickColumnCount; c++) {
+        for (let r = 0; r < brickRowCount; r++) {
+          if (bricks[c][r].status == 1) {
+            const brickX = c * (brickWidth + brickPadding) + brickOffsetLeft;
+            const brickY = r * (brickHeight + brickPadding) + brickOffsetTop;
+            bricks[c][r].x = brickX;
+            bricks[c][r].y = brickY;
+            ctx.beginPath();
+            ctx.rect(brickX, brickY, brickWidth, brickHeight);
+            ctx.fillStyle = "#0095DD";
+            ctx.fill();
+            ctx.closePath();
+          }
+        }
+      }
+    }
+
+    function collisionDetection() {
+      for (let c = 0; c < brickColumnCount; c++) {
+        for (let r = 0; r < brickRowCount; r++) {
+          const b = bricks[c][r];
+          if (b.status == 1) {
+            // Check collision using ball's radius
+            const distX = Math.abs(ballX - (b.x + brickWidth / 2));
+            const distY = Math.abs(ballY - (b.y + brickHeight / 2));
+
+            if (distX <= brickWidth / 2 + ballRadius && distY <= brickHeight / 2 + ballRadius) {
+              ballSpeedY = -ballSpeedY;
+              b.status = 0; // Brick is hit, set status to 0
+              score++;
+              scoreDisplay.textContent = "Score: " + score;
+              if (score == brickRowCount * brickColumnCount) {
+                alert("You Win, Congratulations!");
+                document.location.reload();
+              }
+            }
+          }
+        }
+      }
+    }
+
+    function draw() {
+      if (ballX + ballSpeedX > canvas.width - ballRadius || ballX + ballSpeedX < ballRadius) {
+        ballSpeedX = -ballSpeedX;
+      }
+      if (ballY + ballSpeedY < ballRadius) {
+        ballSpeedY = -ballSpeedY;
+      } else if (ballY + ballSpeedY > canvas.height - ballRadius) {
+        if (ballX > paddleX && ballX < paddleX + paddleWidth) {
+          // Calculate the relative position of the ball on the paddle
+          const relativeHitPosition = (ballX - (paddleX + paddleWidth / 2)) / (paddleWidth / 2);
+
+          // Use trigonometry to calculate new speeds
+          const angle = relativeHitPosition * (Math.PI / 3); // Map to -60 to 60 degrees
+          const speed = Math.sqrt(ballSpeedX ** 2 + ballSpeedY ** 2); // Keep the speed constant
+          ballSpeedX = speed * Math.sin(angle); // Adjust horizontal speed
+          ballSpeedY = -Math.abs(speed * Math.cos(angle)); // Adjust vertical speed (always upward)
+        } else {
+          // Game Over logic
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          drawBricks();
+          drawBall();
+          drawPaddle();
+          ctx.fillStyle = "red";
+          ctx.font = "30px Arial";
+          ctx.textAlign = "center";
+          ctx.fillText("Game Over", canvas.width / 2, canvas.height / 2);
+          return; // Stop the game loop
+        }
+      }
+
+      ballX += ballSpeedX;
+      ballY += ballSpeedY;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawBricks();
+      drawBall();
+      drawPaddle();
+      collisionDetection();
+      requestAnimationFrame(draw);
+    }
+
+    draw();
+  </script>
+</body>
+</html>

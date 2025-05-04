@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Balloon Popper</title>
+  <style>
+    body {
+      margin: 0;
+      background: #111;
+      color: white;
+      font-family: sans-serif;
+      text-align: center;
+    }
+    canvas {
+      background: #222;
+      display: block;
+      margin: 10px auto;
+      cursor: pointer;
+    }
+    h1 {
+      margin-top: 20px;
+    }
+    #score, #timer {
+      font-size: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Balloon Popper</h1>
+  <p>Score: <span id="score">0</span> | Time: <span id="timer">30</span>s</p>
+  <canvas id="game" width="600" height="900"></canvas>
+
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const scoreDisplay = document.getElementById('score');
+    const timerDisplay = document.getElementById('timer');
+
+    let balloons = [];
+    let fallingObjects = []; // Array to store falling objects
+    let score = 0;
+    let gameOver = false;
+    let timeLeft = 30;
+    let gameInterval;
+    let balloonInterval;
+
+    function generateBalloon() {
+      if (gameOver) return;
+      const size = Math.random() * 30 + 30;
+      const x = Math.random() * (canvas.width - size);
+      const y = canvas.height;
+      const speed = Math.random() * 4 + 2;
+      const balloon = { x, y, size, speed };
+      balloons.push(balloon);
+    }
+
+    function generateFallingObject(x, y) {
+      const size = 20; // Size of the falling object
+      const speed = -4; // Initial speed of the falling object
+      const acceleration = 0.15; // Acceleration of the falling object
+      const fallingObject = { x, y, size, speed, acceleration };
+      fallingObjects.push(fallingObject);
+    }
+
+    function updateBalloonPositions() {
+      if (gameOver) return;
+
+      balloons.forEach(balloon => {
+        balloon.y -= balloon.speed;
+      });
+
+      // Remove balloons that go off screen
+      balloons = balloons.filter(balloon => balloon.y + balloon.size > 0);
+    }
+
+    function updateFallingObjects() {
+      fallingObjects.forEach(obj => {
+        obj.speed += obj.acceleration; // Increase speed by acceleration
+        obj.y += obj.speed; // Update position based on speed
+      });
+
+      // Remove objects that fall off the screen
+      fallingObjects = fallingObjects.filter(obj => obj.y < canvas.height);
+    }
+
+    function drawBalloons() {
+      balloons.forEach(balloon => {
+        ctx.beginPath();
+        ctx.arc(balloon.x + balloon.size / 2, balloon.y + balloon.size / 2, balloon.size / 2, 0, Math.PI * 2);
+        ctx.fillStyle = 'red';
+        ctx.fill();
+      });
+    }
+
+    function drawFallingObjects() {
+      fallingObjects.forEach(obj => {
+        ctx.fillStyle = 'blue';
+        ctx.beginPath();
+        ctx.arc(obj.x, obj.y, obj.size / 2, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Draw the balloons
+      drawBalloons();
+
+      // Draw falling objects
+      drawFallingObjects();
+
+      // Draw score
+      ctx.fillStyle = 'white';
+      ctx.font = '20px sans-serif';
+      ctx.fillText(`Score: ${score}`, 10, 30);
+
+      // Draw timer
+      ctx.fillText(`Time: ${timeLeft}`, canvas.width - 100, 30);
+
+      if (gameOver) {
+        ctx.fillStyle = 'yellow';
+        ctx.font = '30px sans-serif';
+        ctx.fillText(score >= 5 ? 'You Win!' : 'Game Over', canvas.width / 2 - 90, canvas.height / 2);
+      }
+    }
+
+    function checkBalloonClick(e) {
+      if (gameOver) return;
+
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+
+      balloons.forEach((balloon, index) => {
+        const dx = balloon.x + balloon.size / 2 - mx;
+        const dy = balloon.y + balloon.size / 2 - my;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance < balloon.size / 2) {
+          // Generate a falling object at the balloon's position
+          generateFallingObject(balloon.x + balloon.size / 2, balloon.y + balloon.size / 2);
+
+          balloons.splice(index, 1);
+          score++;
+          scoreDisplay.textContent = score;
+        }
+      });
+    }
+
+    function updateTimer() {
+      if (gameOver) return;
+
+      timeLeft--;
+      timerDisplay.textContent = timeLeft;
+      if (timeLeft <= 0) {
+        gameOver = true;
+      }
+    }
+
+    function gameLoop() {
+      if (gameOver) return;
+      updateBalloonPositions();
+      updateFallingObjects(); // Update falling objects
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    // Start game intervals
+    function startGame() {
+      gameInterval = setInterval(() => {
+        generateBalloon();
+      }, 700);
+
+      balloonInterval = setInterval(() => {
+        updateTimer();
+      }, 1000);
+    }
+
+    // Handle mouse click on balloons
+    canvas.addEventListener('click', checkBalloonClick);
+
+    // Start the game
+    startGame();
+    gameLoop();
+
+  </script>
+</body>
+</html>

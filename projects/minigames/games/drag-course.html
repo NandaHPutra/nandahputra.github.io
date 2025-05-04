@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Avoid the Walls</title>
+  <style>
+    body {
+      margin: 0;
+      background: #111;
+      color: white;
+      font-family: sans-serif;
+      text-align: center;
+    }
+    canvas {
+      background: #222;
+      display: block;
+      margin: 10px auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>Avoid the Walls</h1>
+  <canvas id="game" width="500" height="500"></canvas>
+
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+
+    const player = { x: 50, y: 450, radius: 10, dragging: false };
+    const goal = { x: 450, y: 50, size: 40 };
+    const walls = [
+      { x: 100, y: 0, width: 20, height: 400 },
+      { x: 200, y: 100, width: 20, height: 400 },
+      { x: 300, y: 0, width: 20, height: 400 },
+      { x: 400, y: 100, width: 20, height: 400 }
+    ];
+    let gameOver = false;
+    let win = false;
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Draw goal
+      ctx.fillStyle = 'green';
+      ctx.fillRect(goal.x, goal.y, goal.size, goal.size);
+
+      // Draw walls
+      ctx.fillStyle = 'red';
+      for (let w of walls) {
+        ctx.fillRect(w.x, w.y, w.width, w.height);
+      }
+
+      // Draw player
+      ctx.fillStyle = win ? 'yellow' : 'white';
+      ctx.beginPath();
+      ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (gameOver) {
+        ctx.fillStyle = win ? 'lime' : 'red';
+        ctx.font = '30px sans-serif';
+        ctx.fillText(win ? 'You Win!' : 'Game Over', 180, 250);
+      }
+    }
+
+    function checkCollision() {
+      // Check walls
+      for (let w of walls) {
+        if (player.x + player.radius > w.x &&
+            player.x - player.radius < w.x + w.width &&
+            player.y + player.radius > w.y &&
+            player.y - player.radius < w.y + w.height) {
+          gameOver = true;
+        }
+      }
+
+      // Check goal
+      if (player.x > goal.x &&
+          player.x < goal.x + goal.size &&
+          player.y > goal.y &&
+          player.y < goal.y + goal.size) {
+        win = true;
+        gameOver = true;
+      }
+    }
+
+    canvas.addEventListener('mousedown', e => {
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      const dx = player.x - mx;
+      const dy = player.y - my;
+      if (dx * dx + dy * dy < player.radius * player.radius) {
+        player.dragging = true;
+      }
+    });
+
+    canvas.addEventListener('mouseup', () => {
+      player.dragging = false;
+    });
+
+    canvas.addEventListener('mousemove', e => {
+      if (!player.dragging || gameOver) return;
+      const rect = canvas.getBoundingClientRect();
+      player.x = e.clientX - rect.left;
+      player.y = e.clientY - rect.top;
+      checkCollision();
+    });
+
+    function loop() {
+      draw();
+      if (!gameOver) requestAnimationFrame(loop);
+    }
+
+    draw();
+    loop();
+  </script>
+</body>
+</html>

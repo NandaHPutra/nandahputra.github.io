@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>4x4 Swap Puzzle</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      background: #f9f9f9;
+    }
+    #board {
+      display: grid;
+      grid-template-columns: repeat(4, 60px);
+      grid-gap: 5px;
+      margin: 30px auto;
+      width: max-content;
+    }
+    .tile {
+      width: 60px;
+      height: 60px;
+      background: #ddd;
+      font-size: 20px;
+      font-weight: bold;
+      line-height: 60px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .tile.selected {
+      background-color: #ccc;
+    }
+    #message {
+      font-size: 20px;
+      color: green;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+
+<h2>4x4 Swap Puzzle</h2>
+<div id="board"></div>
+<div id="message"></div>
+
+<script>
+  const board = document.getElementById('board');
+  const message = document.getElementById('message');
+
+  // Initialize the tiles (numbers 1-16)
+  let tiles = [...Array(16).keys()].map(i => i + 1);
+
+  function shuffle(array) {
+    // Fisher-Yates shuffle
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
+    }
+  }
+
+  shuffle(tiles);
+
+  let selectedTile = null;
+
+  // Draw the board
+  function draw() {
+    board.innerHTML = '';
+    tiles.forEach((num, i) => {
+      const div = document.createElement('div');
+      div.className = 'tile';
+      div.textContent = num;
+      div.addEventListener('click', () => selectTile(i));
+      if (selectedTile === i) {
+        div.classList.add('selected');
+      }
+      board.appendChild(div);
+    });
+  }
+
+  // Handle tile selection
+  function selectTile(index) {
+    if (selectedTile === null) {
+      selectedTile = index;
+    } else {
+      swapTiles(selectedTile, index);
+      selectedTile = null;
+    }
+    draw();
+    checkWin();
+  }
+
+  // Swap two tiles
+  function swapTiles(index1, index2) {
+    [tiles[index1], tiles[index2]] = [tiles[index2], tiles[index1]];
+  }
+
+  // Check for win condition
+  function checkWin() {
+    const winState = [...Array(16).keys()].map(i => i + 1);
+    if (tiles.every((v, i) => v === winState[i])) {
+      message.textContent = "🎉 You win!";
+    } else {
+      message.textContent = "";
+    }
+  }
+
+  draw();
+</script>
+
+</body>
+</html>

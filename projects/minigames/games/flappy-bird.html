@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Mini Flappy</title>
+  <style>
+    canvas {
+      display: block;
+      margin: 0 auto;
+      background: skyblue;
+    }
+  </style>
+</head>
+<body>
+<canvas id="game" width="320" height="480"></canvas>
+
+<script>
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+
+  const GRAVITY = 0.5;
+  const FLAP = -8;
+  const PIPE_WIDTH = 40;
+  const GAP = 120;
+  const PIPE_SPEED = 2;
+
+  let bird = { x: 60, y: 150, velocity: 0, radius: 12 };
+  let pipes = [];
+  let frame = 0;
+  let gameOver = false;
+  let score = 0;
+
+  function reset() {
+    bird.y = 150;
+    bird.velocity = 0;
+    pipes = [];
+    frame = 0;
+    score = 0;
+    gameOver = false;
+  }
+
+  function flap() {
+    if (!gameOver) {
+      bird.velocity = FLAP;
+    } else {
+      reset();
+    }
+  }
+
+  document.addEventListener("keydown", flap);
+  document.addEventListener("mousedown", flap);
+
+  function update() {
+    bird.velocity += GRAVITY;
+    bird.y += bird.velocity;
+
+    if (frame % 90 === 0) {
+      const top = Math.random() * (canvas.height - GAP - 100) + 20;
+      pipes.push({ x: canvas.width, top: top, passed: false });
+    }
+
+    pipes.forEach(pipe => {
+      pipe.x -= PIPE_SPEED;
+
+      // Collision (adjusted bird radius for easier gameplay)
+      const effectiveRadius = bird.radius - 2; // Reduce radius by 2px
+      if (
+        bird.x + effectiveRadius > pipe.x &&
+        bird.x - effectiveRadius < pipe.x + PIPE_WIDTH &&
+        (bird.y - effectiveRadius < pipe.top || bird.y + effectiveRadius > pipe.top + GAP)
+      ) {
+        gameOver = true;
+      }
+
+      // Score increment
+      if (!gameOver && !pipe.passed && pipe.x + PIPE_WIDTH < bird.x) {
+        pipe.passed = true;
+        score++;
+      }
+    });
+
+    pipes = pipes.filter(pipe => pipe.x + PIPE_WIDTH > 0);
+
+    if (bird.y + bird.radius > canvas.height || bird.y - bird.radius < 0) {
+      gameOver = true;
+    }
+
+    frame++;
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Draw bird
+    ctx.fillStyle = "yellow";
+    ctx.beginPath();
+    ctx.arc(bird.x, bird.y, bird.radius, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Draw pipes
+    ctx.fillStyle = "green";
+    pipes.forEach(pipe => {
+      ctx.fillRect(pipe.x, 0, PIPE_WIDTH, pipe.top);
+      ctx.fillRect(pipe.x, pipe.top + GAP, PIPE_WIDTH, canvas.height);
+    });
+
+    // Draw score
+    ctx.fillStyle = "white";
+    ctx.font = "24px sans-serif";
+    ctx.fillText(score, canvas.width / 2 - 5, 30);
+
+    if (gameOver) {
+      ctx.fillStyle = "black";
+      ctx.font = "24px sans-serif";
+      ctx.fillText("Game Over", canvas.width / 2 - 60, canvas.height / 2);
+    }
+  }
+
+  function loop() {
+    update();
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  loop();
+</script>
+</body>
+</html>

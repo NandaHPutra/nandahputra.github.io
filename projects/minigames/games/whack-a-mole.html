@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Whack-a-Mole</title>
+    <style>
+        body {
+            margin: 0;
+            background: #222;
+            color: white;
+            font-family: sans-serif;
+            text-align: center;
+            user-select: none;
+        }
+
+        h1 {
+            margin-top: 10px;
+        }
+
+        canvas {
+            background: #333;
+            display: block;
+            margin: 10px auto;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Whack-a-Mole</h1>
+    <p>Lives: <span id="lives">5</span> | Score: <span id="score">0</span></p>
+    <canvas id="game" width="400" height="400"></canvas>
+
+    <script>
+        const canvas = document.getElementById('game');
+        const ctx = canvas.getContext('2d');
+        const livesDisplay = document.getElementById('lives');
+        const scoreDisplay = document.getElementById('score');
+
+        const gridSize = 3;
+        const moleSize = 100; // Keep the square size
+        const moleRadius = 40; // Increase the mole's radius to almost fill the square
+        let moles = [];
+        let score = 0;
+        let lives = 8;
+        let moleDuration = 1000;
+        let spawnInterval = 1200;
+        let lastDifficultyIncrease = Date.now();
+        let gameOver = false;
+
+        function createMole() {
+            const positions = [];
+            for (let r = 0; r < gridSize; r++) {
+                for (let c = 0; c < gridSize; c++) {
+                    positions.push({
+                        x: c * moleSize,
+                        y: r * moleSize
+                    });
+                }
+            }
+            const pos = positions[Math.floor(Math.random() * positions.length)];
+            const mole = {
+                ...pos,
+                appearTime: Date.now(),
+                missed: false
+            };
+            moles.push(mole);
+
+            setTimeout(() => {
+                if (moles.includes(mole)) {
+                    mole.missed = true; // Mark the mole as missed
+                    updateUI();
+                    if (lives <= 0) {
+                        gameOver = true;
+                        lives = 0
+                    }
+
+                    // Keep the missed mole for one additional frame
+                    setTimeout(() => {
+                        moles.splice(moles.indexOf(mole), 1);
+                        lives--; // Reduce lives only when the mole disappears
+                        if (lives <= 0) {
+                            gameOver = true;
+                            lives = 0
+                        }
+                    }, 100); // Keep the red marker visible for 200ms
+                }
+            }, moleDuration);
+        }
+
+        function updateUI() {
+            livesDisplay.textContent = lives;
+            scoreDisplay.textContent = score;
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw holes
+            ctx.fillStyle = '#555';
+            for (let r = 0; r < gridSize; r++) {
+                for (let c = 0; c < gridSize; c++) {
+                    ctx.fillRect(c * moleSize + 10, r * moleSize + 10, moleSize - 20, moleSize - 20);
+                }
+            }
+
+            // Draw moles
+            for (let mole of moles) {
+                if (mole.missed) {
+                    // Draw red marker for missed mole
+                    ctx.fillStyle = 'red';
+                    ctx.beginPath();
+                    ctx.arc(mole.x + moleSize / 2, mole.y + moleSize / 2, moleRadius, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    // Draw active mole
+                    ctx.fillStyle = 'green';
+                    ctx.beginPath();
+                    ctx.arc(mole.x + moleSize / 2, mole.y + moleSize / 2, moleRadius, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            if (gameOver) {
+                ctx.fillStyle = 'yellow';
+                ctx.font = '30px sans-serif';
+                ctx.fillText('Game Over', 120, 200);
+            }
+        }
+
+        function gameLoop() {
+            if (!gameOver) {
+                if (Date.now() - lastDifficultyIncrease >= 5000) {
+                    moleDuration -= moleDuration * 0.1;
+                    spawnInterval -= spawnInterval * 0.1;
+                    lastDifficultyIncrease = Date.now();
+                }
+                draw();
+                requestAnimationFrame(gameLoop);
+            } else {
+                draw(); // Draw final frame with "Game Over"
+            }
+        }
+
+        function spawnLoop() {
+            if (!gameOver) {
+                createMole();
+                setTimeout(spawnLoop, spawnInterval);
+            }
+        }
+
+        canvas.addEventListener('click', e => {
+            if (gameOver) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            let hit = false;
+            for (let mole of moles) {
+                const dx = mole.x + moleSize / 2 - x;
+                const dy = mole.y + moleSize / 2 - y;
+                if (Math.sqrt(dx * dx + dy * dy) < moleRadius) {
+                    moles.splice(moles.indexOf(mole), 1);
+                    score++;
+                    updateUI();
+                    hit = true;
+                    break;
+                }
+            }
+
+            if (!hit) {
+                // Reduce lives by 0.1 on misclick
+                lives = Math.round((lives - 0.1) * 10) / 10;
+                updateUI();
+                if (lives <= 0) {
+                    gameOver = true;
+                    lives = 0
+                }
+            }
+        });
+
+        updateUI();
+        spawnLoop();
+        gameLoop();
+    </script>
+</body>
+
+</html>

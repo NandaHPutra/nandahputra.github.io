@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Mini Runner</title>
+  <style>
+    canvas {
+      display: block;
+      margin: 0 auto;
+      background: #f4f4f4;
+    }
+  </style>
+</head>
+<body>
+<canvas id="game" width="600" height="150"></canvas>
+
+<script>
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+
+  const GRAVITY = 0.5;
+  const JUMP_VELOCITY = -9;
+  const GROUND_HEIGHT = 20;
+  const OBSTACLE_WIDTH = 20;
+  const OBSTACLE_SPEED = 6;
+
+  let dino = { x: 50, y: 0, width: 20, height: 20, velocity: 0, jumping: false };
+  let obstacles = [];
+  let frame = 0;
+  let gameOver = false;
+  let score = 0;
+
+  function reset() {
+    dino.y = canvas.height - GROUND_HEIGHT - dino.height;
+    dino.velocity = 0;
+    dino.jumping = false;
+    obstacles = [];
+    frame = 0;
+    score = 0;
+    gameOver = false;
+  }
+
+  function jump() {
+    if (!gameOver && !dino.jumping) {
+      dino.velocity = JUMP_VELOCITY;
+      dino.jumping = true;
+    } else if (gameOver) {
+      reset();
+    }
+  }
+
+  document.addEventListener("keydown", e => {
+    if (e.code === "Space" || e.code === "ArrowUp") jump();
+  });
+  document.addEventListener("mousedown", jump);
+
+  function update() {
+    // Apply gravity
+    dino.velocity += GRAVITY;
+    dino.y += dino.velocity;
+
+    // Ground collision
+    const groundY = canvas.height - GROUND_HEIGHT - dino.height;
+    if (dino.y >= groundY) {
+      dino.y = groundY;
+      dino.velocity = 0;
+      dino.jumping = false;
+    }
+
+    // Spawn obstacles
+    if (frame % 90 === 0) {
+      obstacles.push({ x: canvas.width, height: 20 + Math.random() * 20 });
+    }
+
+    // Move obstacles
+    obstacles.forEach(ob => {
+      ob.x -= OBSTACLE_SPEED;
+
+      // Collision detection
+      if (
+        dino.x < ob.x + OBSTACLE_WIDTH &&
+        dino.x + dino.width > ob.x &&
+        dino.y + dino.height > canvas.height - GROUND_HEIGHT - ob.height
+      ) {
+        gameOver = true;
+      }
+
+      // Score increment
+      if (!gameOver && !ob.passed && ob.x + OBSTACLE_WIDTH < dino.x) {
+        ob.passed = true;
+        score++;
+      }
+    });
+
+    obstacles = obstacles.filter(ob => ob.x + OBSTACLE_WIDTH > 0);
+
+    frame++;
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Draw dino
+    ctx.fillStyle = "black";
+    ctx.fillRect(dino.x, dino.y, dino.width, dino.height);
+
+    // Draw obstacles
+    ctx.fillStyle = "green";
+    obstacles.forEach(ob => {
+      ctx.fillRect(ob.x, canvas.height - GROUND_HEIGHT - ob.height, OBSTACLE_WIDTH, ob.height);
+    });
+
+    // Draw ground
+    ctx.fillStyle = "gray";
+    ctx.fillRect(0, canvas.height - GROUND_HEIGHT, canvas.width, GROUND_HEIGHT);
+
+    // Draw score
+    ctx.fillStyle = "black";
+    ctx.font = "18px sans-serif";
+    ctx.fillText("Score: " + score, canvas.width - 100, 20);
+
+    if (gameOver) {
+      ctx.font = "24px sans-serif";
+      ctx.fillText("Game Over", canvas.width / 2 - 60, canvas.height / 2 - 20);
+      ctx.font = "16px sans-serif";
+      ctx.fillText("Press space or click to restart", canvas.width / 2 - 110, canvas.height / 2 + 10);
+    }
+  }
+
+  function loop() {
+    update();
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  reset();
+  loop();
+</script>
+</body>
+</html>
