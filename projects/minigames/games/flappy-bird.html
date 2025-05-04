@@ -49,6 +49,7 @@
 
   document.addEventListener("keydown", flap);
   document.addEventListener("mousedown", flap);
+  document.addEventListener("touchstart", flap); // Add touch support for mobile devices
 
   function update() {
     bird.velocity += GRAVITY;
